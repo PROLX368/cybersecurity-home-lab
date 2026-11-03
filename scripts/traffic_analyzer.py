@@ -1,6 +1,4 @@
 
-#!/usr/bin/env python3
-
 import argparse
 import json
 from collections import Counter, defaultdict
@@ -10,6 +8,12 @@ from pathlib import Path
 from scapy.all import rdpcap, IP, TCP, UDP, ICMP
 
 
+# Detection thresholds
+PORT_SCAN_THRESHOLD = 10
+HIGH_SYN_THRESHOLD = 20
+SSH_ATTEMPT_THRESHOLD = 10
+
+
 def analyze_capture(file_path):
     packets = rdpcap(str(file_path))
 
@@ -17,6 +21,8 @@ def analyze_capture(file_path):
     protocol_counter = Counter()
     destination_ports = defaultdict(set)
     syn_counter = Counter()
+    ssh_attempts = Counter()
+
     alerts = []
 
     for packet in packets:
@@ -24,7 +30,6 @@ def analyze_capture(file_path):
             continue
 
         source = packet[IP].src
-
         ip_counter[source] += 1
 
         if TCP in packet:
@@ -35,8 +40,13 @@ def analyze_capture(file_path):
 
             flags = int(tcp.flags)
 
+            # TCP SYN without ACK
             if flags & 0x02 and not flags & 0x10:
                 syn_counter[source] += 1
+
+                # SSH connection attempts
+                if int(tcp.dport) == 22:
+                    ssh_attempts[source] += 1
 
         elif UDP in packet:
             protocol_counter["UDP"] += 1
@@ -48,8 +58,9 @@ def analyze_capture(file_path):
         else:
             protocol_counter["OTHER"] += 1
 
+    # Port scan detection
     for ip, ports in destination_ports.items():
-        if len(ports) >= 10:
+        if len(ports) >= PORT_SCAN_THRESHOLD:
             alerts.append({
                 "type": "POSSIBLE_PORT_SCAN",
                 "source_ip": ip,
@@ -57,12 +68,30 @@ def analyze_capture(file_path):
                 "severity": "MEDIUM"
             })
 
-        if syn_counter[ip] >= 20:
+    # High SYN activity detection
+    for ip, count in syn_counter.items():
+        if count >= HIGH_SYN_THRESHOLD:
             alerts.append({
                 "type": "HIGH_SYN_ACTIVITY",
                 "source_ip": ip,
-                "syn_packets": syn_counter[ip],
+                "syn_packets": count,
                 "severity": "MEDIUM"
+            })
+
+    # Possible SSH brute force detection
+    for ip, count in ssh_attempts.items():
+        if count >= SSH_ATTEMPT_THRESHOLD:
+            alerts.append({
+                "type": "POSSIBLE_SSH_BRUTE_FORCE",
+                "source_ip": ip,
+                "ssh_connection_attempts": count,
+                "destination_port": 22,
+                "severity": "HIGH",
+                "description": (
+                    "Repeated SSH connection attempts detected. "
+                    "Authentication failures cannot be confirmed "
+                    "from packet captures alone."
+                )
             })
 
     report = {
@@ -75,6 +104,7 @@ def analyze_capture(file_path):
             ip: sorted(ports)
             for ip, ports in destination_ports.items()
         },
+        "ssh_connection_attempts": dict(ssh_attempts),
         "alerts": alerts
     }
 
@@ -83,7 +113,7 @@ def analyze_capture(file_path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Network Traffic Analyzer v2"
+        description="Network Traffic Analyzer v3"
     )
 
     parser.add_argument(
@@ -93,7 +123,6 @@ def main():
     )
 
     args = parser.parse_args()
-
     capture = Path(args.file)
 
     if not capture.is_file():
@@ -130,6 +159,10 @@ def main():
     for protocol, count in report["protocols"].items():
         print(f"  {protocol}: {count}")
 
+    print("\nSSH connection attempts:")
+    for ip, count in report["ssh_connection_attempts"].items():
+        print(f"  {ip}: {count} attempts")
+
     print("\nSecurity alerts:")
     if report["alerts"]:
         for alert in report["alerts"]:
@@ -144,4 +177,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

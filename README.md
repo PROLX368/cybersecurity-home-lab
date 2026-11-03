@@ -102,3 +102,41 @@ Run tests with:
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
+
+## Security Detection - Version 3
+
+The Network Traffic Analyzer includes the following detection capabilities:
+
+### 1. Possible Port Scan
+Identifies source IPs communicating with multiple unique destination ports.
+
+### 2. High SYN Activity
+Detects unusually high volumes of TCP SYN packets from a single source IP.
+
+### 3. Possible SSH Brute Force
+Identifies repeated SSH connection attempts targeting TCP port 22.
+
+Note: Repeated SSH connection attempts do not necessarily indicate failed authentication. Authentication failures require additional evidence, such as SSH server logs.
+
+## Automated Tests
+
+The project includes automated tests for:
+
+- TCP port scan detection.
+- Normal network traffic.
+- Repeated SSH connection detection.
+
+Run the tests:
+
+```bash
+python3 -m unittest discover -s tests -p "test_*.py" -v
+```
+
+## Generated Reports
+
+The analyzer automatically generates:
+
+- `reports/analysis-results.json`
+- `reports/security-alerts.json`
+
+These files contain traffic statistics and detected security alerts.

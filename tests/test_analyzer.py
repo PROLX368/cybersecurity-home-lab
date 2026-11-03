@@ -1,3 +1,4 @@
+
 import unittest
 from pathlib import Path
 from scapy.all import IP, TCP, wrpcap
@@ -11,7 +12,6 @@ class TestTrafficAnalyzer(unittest.TestCase):
     def setUp(self):
         self.test_file = Path("tests/test_traffic.pcap")
         self.report_file = Path("reports/analysis-results.json")
-        self.alert_file = Path("reports/security-alerts.json")
 
     def run_analyzer(self, packets):
         wrpcap(str(self.test_file), packets)
@@ -29,7 +29,7 @@ class TestTrafficAnalyzer(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
-        with open(self.report_file) as file:
+        with open(self.report_file, encoding="utf-8") as file:
             return json.load(file)
 
     def test_port_scan_detection(self):
@@ -57,6 +57,33 @@ class TestTrafficAnalyzer(unittest.TestCase):
 
         self.assertEqual(report["total_packets"], 1)
         self.assertEqual(report["alerts"], [])
+
+    def test_ssh_brute_force_detection(self):
+        packets = [
+            IP(src="192.168.56.10", dst="192.168.56.20")
+            / TCP(
+                sport=45000 + attempt,
+                dport=22,
+                flags="S"
+            )
+            for attempt in range(30)
+        ]
+
+        report = self.run_analyzer(packets)
+
+        alert_types = [
+            alert["type"] for alert in report["alerts"]
+        ]
+
+        self.assertIn(
+            "POSSIBLE_SSH_BRUTE_FORCE",
+            alert_types
+        )
+
+        self.assertEqual(
+            report["ssh_connection_attempts"]["192.168.56.10"],
+            30
+        )
 
     def tearDown(self):
         if self.test_file.exists():

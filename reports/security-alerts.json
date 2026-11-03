@@ -1,8 +1,16 @@
 [
     {
-        "type": "POSSIBLE_PORT_SCAN",
+        "type": "HIGH_SYN_ACTIVITY",
         "source_ip": "192.168.56.10",
-        "unique_destination_ports": 15,
+        "syn_packets": 30,
         "severity": "MEDIUM"
+    },
+    {
+        "type": "POSSIBLE_SSH_BRUTE_FORCE",
+        "source_ip": "192.168.56.10",
+        "ssh_connection_attempts": 30,
+        "destination_port": 22,
+        "severity": "HIGH",
+        "description": "Repeated SSH connection attempts detected. Authentication failures cannot be confirmed from packet captures alone."
     }
 ]
