@@ -1,0 +1,8 @@
+[
+    {
+        "type": "POSSIBLE_PORT_SCAN",
+        "source_ip": "192.168.56.10",
+        "unique_destination_ports": 15,
+        "severity": "MEDIUM"
+    }
+]

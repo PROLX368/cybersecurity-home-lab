@@ -1,0 +1,38 @@
+{
+    "timestamp": "2026-11-03T00:07:36.295606+00:00",
+    "capture_file": "tests/test_traffic.pcap",
+    "total_packets": 15,
+    "source_ips": {
+        "192.168.56.10": 15
+    },
+    "protocols": {
+        "TCP": 15
+    },
+    "destination_ports": {
+        "192.168.56.10": [
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+        ]
+    },
+    "alerts": [
+        {
+            "type": "POSSIBLE_PORT_SCAN",
+            "source_ip": "192.168.56.10",
+            "unique_destination_ports": 15,
+            "severity": "MEDIUM"
+        }
+    ]
+}
